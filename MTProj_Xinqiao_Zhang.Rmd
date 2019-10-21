@@ -1,0 +1,118 @@
+---
+title: "MA615 MidTerm Project"
+author: "Xinqiao Zhang"
+date: "10/17/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = 'center', fig.width = 5.656, fig.height = 4, global.par = TRUE)
+pacman::p_load("ggplot2","dplyr","tidyverse","kableExtra")
+```
+
+## Introduction 
+\qquad The data we acquired was the Reef Life Survey, Carried out by the professional divers to study the coral reef lives and to improve the biodiversity. Reef Life Survey(RLS) motivated professional divers to gather the data from observations of coral reefs. RLS aimed to raised the global awareness to marine biodiversity and is freely available to all users. 
+
+## Data and Material 
+\qquad I download the data from the RLS portal http://reeflifesurvey.imas.utas.edu.au/static/landing.html to find a dataset for this study. I chose the cryptic fish data from 2006 to 2019 and study the reef habitat. 
+
+```{r}
+data<- read.csv("Reef_Life_Survey_(RLS)#_Cryptic_Fish-cryptic_fish_surveys.csv", header = TRUE)
+```
+\qquad Before we carry out any further study on the data, we should clean the data first.  
+
+## Data Cleaning
+```{r}
+## Check for empty entries and clean. 
+data<- data[(colSums(is.na(data)) != nrow(data))]
+```
+\qquad Luckily, we do not have any missing entries in any rows because te survey was carefully carried out. We get to keep all the original data from the dataset we acquired. 
+
+```{r}
+## Check the Country variable to find the one with the most entries. 
+summary(data$Country)
+data<- data %>% filter(Country=="Australia")
+```
+\qquad Since there are 68459 observaations in the data and 50073 of them are in Australia, 73.14% of all the observations, we decided to study the data specifically in Australia. 
+
+```{r}
+## Check the Class label. 
+unique(data$Class)
+data<- data%>% filter(Class=="Actinopterygii")
+```
+\qquad Among the 50073 observations in Australia, 48736 of them belong to the Actinopterygii Class. In order to carry out a more precise study, we choose to study the Actinopterygii as the majority.  
+
+```{r, message=FALSE, warning=FALSE}
+## Separate the Date by Year, Month, Day and Time to get new variables. However, we are only taking years into consideratoin. 
+data1<- data %>% separate(SurveyDate, c("Year","Month","Day"))
+data1<- data1 %>% separate(Day, c("Day","Time"), sep="T")
+## Factor the different time variables to make them usable for later study.  
+data1$Year<- as.factor(data1$Year)
+data1$Month<- as.factor(data1$Month)
+data1$Day<- as.factor(data1$Day)
+data1$Time<- as.factor(data1$Time)
+```
+\qquad We noticed that the column of SurveyDate was entries of a form as year-month-day-time. Hence we separate the columns into the 4 columns and factor them. 
+
+```{r}
+## Group the data by Years to see the trends of the reefs. And summarize by the number entries that are useful in the study, which are Depth, Block and Total. 
+data_Year<- data1 %>% group_by(Year) %>% summarize(NewDepth=mean(Depth), NewBlock=sum(Block), NewTotal=sum(Total))
+summary(data_Year)
+## Grgoup the data by Families. 
+data_Family<- data1 %>% group_by(Family) %>% summarize(NewDepth=mean(Depth), NewBlock=sum(Block), NewTotal=sum(Total))
+summary(data_Family)
+## Group the data by Taxons to get a more specific dataset than the Family subset. 
+data_Taxon<- data1 %>% group_by(Taxon) %>% summarize(NewDepth=mean(Depth), NewBlock=sum(Block), NewTotal=sum(Total))
+summary(data_Taxon)
+## Group the data by Depth to get a more numerical study. 
+data_Depth<- data1 %>% group_by(Depth) %>% summarize(NewBlock=mean(Block), NewTotal=mean(Total))
+summary(data_Depth)
+```
+\qquad I grouped the data or 4 different aspects, the Year, Family, Taxon and Depth, which are, in my opinion, the 4 aspects that would be representative in relation to the total count of blocks of reefs.   
+
+## Draw the plots for each aspect.
+
+#### Plots for data grouped by years
+```{r,fig.align='center'}
+## Using line and point plot to describe the trend of reefs with respect to time. 
+ggplot(data_Year, aes(x=Year, y=NewBlock, group=1))+ geom_line() + geom_point() + labs(title="Trend of Block by Year") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplot(data_Year, aes(x=Year, y=NewTotal, group=1))+ geom_line() + geom_point() + labs(title="Trend of Total by Year")+ theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+\qquad As we could see in the plots, the trend of blocks observed from 2006 to 2019 has been climbing up and down. It has its first drop in 2011, same as the first drop of total number observed. Then they both have a drop in the year 2014. This could be the result of climate changing or environment problems happened in these 2 years. The first plot has its climax point in the year 2018 and the total number trend has its climax point in 2016.  
+
+### Plots for data grouped by Families
+```{r,fig.align='center'}
+ggplot(data_Family, aes(x=Family, y=NewDepth, group=1))+ geom_point() + labs(title="Block # at certain Depths")
+data_Family1<- data_Family[order(data_Family$NewDepth),]
+ggplot(data_Family1[1:10,], aes(Family, NewBlock)) + geom_bar(stat = "identity") + labs(title="Block# of 5 Families that habitat at the least avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Family1[1:10,], aes(Family, NewTotal)) + geom_bar(stat = "identity") + labs(title="Total of 5 Families that habitat at the least avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Family1[53:62,], aes(Family, NewBlock)) + geom_bar(stat = "identity") + labs(title="Block# of 5 Families that habitat at the most avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Family1[53:62,], aes(Family, NewTotal)) + geom_bar(stat = "identity") + labs(title="Total of 5 Families that habitat at the most avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+```
+\qquad From the first plot, we can tell that it is common for many families of cryptic fish to habitat in an average depth of 6. There are 73 different families in the data and we are only showing 10 with the highest depth of habitats and 10 with the lowest. 
+
+### Plots for data grouped by Taxons
+```{r,fig.align='center'}
+data_Taxon1<- data_Taxon[order(data_Taxon$NewDepth),]
+ggplot(data_Taxon1[1:20,], aes(Taxon, NewBlock)) + geom_bar(stat = "identity") + labs(title="Block# of 5 Taxons that habitat at the least avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Taxon1[1:20,], aes(Taxon, NewTotal)) + geom_bar(stat = "identity") + labs(title="Total of 5 Taxons that habitat at the least avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Taxon1[689:708,], aes(Taxon, NewBlock)) + geom_bar(stat = "identity") + labs(title="Block# of 5 Taxons that habitat at the most avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+ggplot(data_Taxon1[689:708,], aes(Taxon, NewTotal)) + geom_bar(stat = "identity") + labs(title="Total of 5 Taxons that habitat at the most avg depth") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+\qquad From the plots, we could get an overview of the habitant of different Taxons. There are 755 different taxons in the data and we are only showing 20 with the highest depth of habitats and 20 with the lowest. 
+
+### Plots for data ordered by Depths 
+```{r}
+ggplot(data_Depth, aes(x=Depth, y=NewBlock, group=1))+ geom_point() + labs(title="Block # at certain Depths")
+ggplot(data_Depth, aes(x=Depth, y=NewTotal, group=1))+ geom_point() + labs(title="Total Reefs # at certain Depths")
+```
+\qquad Regardless of the family and taxon, most of the observations of blocks and total are under depth 20. 
+
+
+## Reference 
+Reef Life Survey Data Portal: 
+http://reeflifesurvey.imas.utas.edu.au/static/landing.html
+
+
+
