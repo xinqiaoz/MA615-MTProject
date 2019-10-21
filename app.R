@@ -56,7 +56,8 @@ ui2<- fluidPage(
         sidebarPanel(
             selectInput(inputId = "year", label = "Year", data_Year$Year)
         ), 
-        mainPanel(tableOutput("ye"))
+        mainPanel(tableOutput("ye"),
+                  plotOutput("yr", click = "plot_click", hover = "plot_hover"))
     )
 )
 
@@ -64,6 +65,10 @@ ui2<- fluidPage(
 server2<- function(input, output, session){
     output$ye= renderTable({
         print(filter(data_Year, Year==input$year))
+    })
+    output$yr= renderPlot({
+        ggplot(data_Year, aes(x=Year, y=NewBlock, group=1))+ geom_line() + geom_point() + labs(title="Trend of Block by Year") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        ggplot(data_Year, aes(x=Year, y=NewTotal, group=1))+ geom_line() + geom_point() + labs(title="Trend of Total by Year")+ theme(axis.text.x = element_text(angle = 45, hjust = 1))
     })
 }
 
